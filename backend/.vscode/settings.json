@@ -1,0 +1,5 @@
+{
+    "python.defaultInterpreterPath": "C:\\Users\\admin\\Documents\\dataforge-ai\\backend\\dataforge_env\\Scripts\\python.exe",
+    "python.analysis.extraPaths": ["C:\\Users\\admin\\Documents\\dataforge-ai\\backend\\dataforge_env\\Lib\\site-packages"],
+    "python.terminal.activateEnvironment": true
+}
