@@ -1,10 +1,11 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import snowflake.connector
 import os
 from datetime import datetime
+from connectors.csv_connector import load_csv_to_bronze
 
 # Load environment variables
 load_dotenv()
@@ -37,7 +38,7 @@ def get_snowflake_connection():
     )
 
 # ─────────────────────────────────────────
-# ROUTES
+# BASIC ROUTES
 # ─────────────────────────────────────────
 
 @app.get("/")
@@ -75,7 +76,6 @@ def setup_database():
         conn = get_snowflake_connection()
         cursor = conn.cursor()
 
-        # Create all tracking tables
         tables = [
             """CREATE TABLE IF NOT EXISTS PIPELINE_RUNS (
                 RUN_ID VARCHAR(50),
@@ -146,7 +146,7 @@ def setup_database():
             "message": "All DataForge AI tables created successfully",
             "tables_created": [
                 "PIPELINE_RUNS",
-                "QUARANTINE_RECORDS", 
+                "QUARANTINE_RECORDS",
                 "SCHEMA_CHANGES",
                 "VOLUME_HISTORY",
                 "QUERY_HISTORY",
@@ -183,5 +183,122 @@ def pipeline_status():
             "timestamp": datetime.now().isoformat()
         }
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ─────────────────────────────────────────
+# CSV CONNECTOR ROUTES
+# ─────────────────────────────────────────
+
+@app.post("/upload/csv")
+async def upload_csv(
+    file: UploadFile = File(...),
+    table_name: str = "ELF_DATA"
+):
+    """Upload CSV or Excel file and load to Snowflake Bronze automatically"""
+    try:
+        contents = await file.read()
+        result = load_csv_to_bronze(
+            file_content=contents,
+            file_name=file.filename,
+            table_name=table_name
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/bronze/tables")
+def list_bronze_tables():
+    """List all Bronze tables in Snowflake"""
+    try:
+        conn = get_snowflake_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT TABLE_NAME, ROW_COUNT, CREATED
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = 'PUBLIC'
+            AND TABLE_NAME LIKE 'BRZ_%'
+            ORDER BY CREATED DESC
+        """)
+        tables = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {
+            "bronze_tables": [
+                {
+                    "table_name": t[0],
+                    "row_count": t[1],
+                    "created": str(t[2])
+                }
+                for t in tables
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/pipeline/runs")
+def get_pipeline_runs():
+    """Get last 20 pipeline runs"""
+    try:
+        conn = get_snowflake_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT RUN_ID, SOURCE_NAME, START_TIME, STATUS,
+                   RECORDS_FETCHED, RECORDS_LOADED, RECORDS_QUARANTINED,
+                   DURATION_SECONDS, ERROR_MESSAGE
+            FROM PIPELINE_RUNS
+            ORDER BY START_TIME DESC
+            LIMIT 20
+        """)
+        runs = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {
+            "pipeline_runs": [
+                {
+                    "run_id": r[0],
+                    "source_name": r[1],
+                    "start_time": str(r[2]),
+                    "status": r[3],
+                    "records_fetched": r[4],
+                    "records_loaded": r[5],
+                    "records_quarantined": r[6],
+                    "duration_seconds": r[7],
+                    "error_message": r[8]
+                }
+                for r in runs
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/quarantine")
+def get_quarantine_records():
+    """Get quarantined records"""
+    try:
+        conn = get_snowflake_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT QUARANTINE_ID, RUN_ID, SOURCE_NAME,
+                   REJECTION_REASON, QUARANTINED_AT
+            FROM QUARANTINE_RECORDS
+            ORDER BY QUARANTINED_AT DESC
+            LIMIT 50
+        """)
+        records = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {
+            "quarantine_records": [
+                {
+                    "quarantine_id": r[0],
+                    "run_id": r[1],
+                    "source_name": r[2],
+                    "rejection_reason": r[3],
+                    "quarantined_at": str(r[4])
+                }
+                for r in records
+            ]
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
