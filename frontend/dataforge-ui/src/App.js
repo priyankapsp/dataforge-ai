@@ -2,14 +2,13 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 import {
   Database, Activity, Shield, Play, Search,
   AlertTriangle, CheckCircle, XCircle, Upload,
-  RefreshCw, Zap, TrendingUp, Server, Eye,
-  ChevronRight, Clock, Table, Cpu
+  RefreshCw, Zap, TrendingUp, ChevronRight, Table, Cpu
 } from "lucide-react";
 
 const API = "http://127.0.0.1:8000";
@@ -127,6 +126,7 @@ function Sidebar({ active, setActive }) {
     { id: "sources", icon: Database, label: "Sources" },
     { id: "quality", icon: Shield, label: "Quality" },
     { id: "pipeline", icon: Cpu, label: "Pipeline" },
+    { id: "transform", icon: Zap, label: "Transform" },
     { id: "query", icon: Search, label: "AI Query" },
   ];
   return (
@@ -142,52 +142,42 @@ function Sidebar({ active, setActive }) {
       <div style={{ marginBottom: 32, padding: "0 8px" }}>
         <div style={{
           background: `linear-gradient(135deg, ${theme.accent}, ${theme.accent2})`,
-          borderRadius: 12, padding: "10px 14px",
-          marginBottom: 8
+          borderRadius: 12, padding: "10px 14px", marginBottom: 8
         }}>
           <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: 1 }}>DataForge</div>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", letterSpacing: 2 }}>AI · v2.0</div>
         </div>
-        <div style={{
-          fontSize: 10, color: theme.muted,
-          textAlign: "center", letterSpacing: 1
-        }}>E.L.F Beauty Pipeline</div>
+        <div style={{ fontSize: 10, color: theme.muted, textAlign: "center", letterSpacing: 1 }}>E.L.F Beauty Pipeline</div>
       </div>
-
       <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
         {nav.map(item => (
-          <button key={item.id} onClick={() => setActive(item.id)}
-            style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "12px 14px", borderRadius: 12, border: "none",
-              cursor: "pointer", textAlign: "left", width: "100%",
-              background: active === item.id
-                ? `linear-gradient(135deg, ${theme.accent}22, ${theme.accent2}22)`
-                : "transparent",
-              color: active === item.id ? theme.accent : theme.muted,
-              borderLeft: active === item.id ? `3px solid ${theme.accent}` : "3px solid transparent",
-              transition: "all 0.2s",
-              fontSize: 13, fontWeight: active === item.id ? 700 : 400,
-              fontFamily: "Syne, sans-serif"
-            }}>
+          <button key={item.id} onClick={() => setActive(item.id)} style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "12px 14px", borderRadius: 12, border: "none",
+            cursor: "pointer", textAlign: "left", width: "100%",
+            background: active === item.id
+              ? `linear-gradient(135deg, ${theme.accent}22, ${theme.accent2}22)`
+              : "transparent",
+            color: active === item.id ? theme.accent : theme.muted,
+            borderLeft: active === item.id ? `3px solid ${theme.accent}` : "3px solid transparent",
+            transition: "all 0.2s",
+            fontSize: 13, fontWeight: active === item.id ? 700 : 400,
+            fontFamily: "Syne, sans-serif"
+          }}>
             <item.icon size={16}/>
             {item.label}
             {active === item.id && <ChevronRight size={12} style={{ marginLeft: "auto" }}/>}
           </button>
         ))}
       </nav>
-
       <div style={{
-        padding: "12px 14px",
-        background: `${theme.green}11`,
-        borderRadius: 12,
-        border: `1px solid ${theme.green}33`
+        padding: "12px 14px", background: `${theme.green}11`,
+        borderRadius: 12, border: `1px solid ${theme.green}33`
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{
             width: 8, height: 8, borderRadius: "50%",
-            background: theme.green,
-            animation: "pulse 2s infinite"
+            background: theme.green, animation: "pulse 2s infinite"
           }}/>
           <span style={{ fontSize: 11, color: theme.green, fontWeight: 600 }}>LIVE</span>
         </div>
@@ -238,19 +228,14 @@ function Dashboard() {
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>Pipeline Dashboard</h1>
         <p style={{ color: theme.muted, fontSize: 13 }}>Real-time monitoring for E.L.F Beauty data pipeline</p>
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
         <MetricCard icon={Play} label="Total Runs" value={status?.total_pipeline_runs || 0} sub="All time" color={theme.accent} delay={0}/>
         <MetricCard icon={CheckCircle} label="Successful" value={status?.successful_runs || 0} sub={`${successRate}% success rate`} color={theme.green} delay={100}/>
         <MetricCard icon={XCircle} label="Failed" value={status?.failed_runs || 0} sub="Needs attention" color={theme.red} delay={200}/>
         <MetricCard icon={TrendingUp} label="Records Loaded" value={(status?.total_records_loaded || 0).toLocaleString()} sub="To Snowflake Bronze" color={theme.blue} delay={300}/>
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 24 }}>
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.border}`, padding: 24
-        }}>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
           <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Records Loaded Per Run</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
@@ -263,11 +248,7 @@ function Dashboard() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.border}`, padding: 24
-        }}>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
           <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Pipeline Health</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {[
@@ -292,11 +273,7 @@ function Dashboard() {
           </div>
         </div>
       </div>
-
-      <div style={{
-        background: theme.card, borderRadius: 16,
-        border: `1px solid ${theme.border}`, padding: 24
-      }}>
+      <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
         <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Recent Pipeline Runs</h3>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -370,12 +347,8 @@ function Sources() {
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>Data Sources</h1>
         <p style={{ color: theme.muted, fontSize: 13 }}>Manage all pipeline connectors and data sources</p>
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.border}`, padding: 24
-        }}>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ background: `${theme.blue}22`, padding: 10, borderRadius: 12 }}>
@@ -410,11 +383,7 @@ function Sources() {
             {syncing ? "Syncing..." : "Sync All Tables"}
           </button>
         </div>
-
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.border}`, padding: 24
-        }}>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <div style={{ background: `${theme.green}22`, padding: 10, borderRadius: 12 }}>
               <Upload size={20} color={theme.green}/>
@@ -424,10 +393,8 @@ function Sources() {
               <div style={{ fontSize: 12, color: theme.muted }}>Upload files to Bronze layer</div>
             </div>
           </div>
-          <input type="text" value={tableName}
-            onChange={e => setTableName(e.target.value)}
-            placeholder="Table name"
-            style={{
+          <input type="text" value={tableName} onChange={e => setTableName(e.target.value)}
+            placeholder="Table name" style={{
               width: "100%", padding: "10px 14px",
               background: theme.surface, border: `1px solid ${theme.border}`,
               borderRadius: 8, color: theme.text, marginBottom: 10,
@@ -435,8 +402,7 @@ function Sources() {
             }}/>
           <div style={{
             border: `2px dashed ${theme.border}`, borderRadius: 10,
-            padding: "20px", textAlign: "center", marginBottom: 12,
-            cursor: "pointer", transition: "border-color 0.2s"
+            padding: "20px", textAlign: "center", marginBottom: 12, cursor: "pointer"
           }} onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); setFile(e.dataTransfer.files[0]); }}>
             <input type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }}
@@ -458,7 +424,6 @@ function Sources() {
           </button>
         </div>
       </div>
-
       {message && (
         <div style={{
           background: theme.card, border: `1px solid ${theme.border}`,
@@ -466,11 +431,7 @@ function Sources() {
           fontSize: 13, color: theme.green
         }}>{message}</div>
       )}
-
-      <div style={{
-        background: theme.card, borderRadius: 16,
-        border: `1px solid ${theme.border}`, padding: 24
-      }}>
+      <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
         <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Bronze Tables in Snowflake</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
           {bronzeTables.map(t => (
@@ -528,7 +489,6 @@ function Quality() {
           {loading ? "Running Checks..." : "Run Quality Checks"}
         </button>
       </div>
-
       {results.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 24 }}>
           {results.map((r, i) => r.table && (
@@ -578,11 +538,7 @@ function Quality() {
           ))}
         </div>
       )}
-
-      <div style={{
-        background: theme.card, borderRadius: 16,
-        border: `1px solid ${theme.border}`, padding: 24
-      }}>
+      <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
         <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Alert Log</h3>
         {alerts.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px", color: theme.muted, fontSize: 13 }}>
@@ -629,25 +585,19 @@ function Pipeline() {
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>Pipeline Runs</h1>
         <p style={{ color: theme.muted, fontSize: 13 }}>Complete audit trail of all pipeline executions</p>
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         <MetricCard icon={Play} label="Total Runs" value={runs.length} color={theme.accent}/>
         <MetricCard icon={CheckCircle} label="Successful" value={runs.filter(r => r.status === "SUCCESS").length} color={theme.green}/>
         <MetricCard icon={AlertTriangle} label="Quarantined" value={quarantine.length} color={theme.yellow}/>
       </div>
-
-      <div style={{
-        background: theme.card, borderRadius: 16,
-        border: `1px solid ${theme.border}`, padding: 24, marginBottom: 24
-      }}>
+      <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24, marginBottom: 24 }}>
         <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Pipeline Timeline</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {runs.slice(0, 10).map((run, i) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 16,
               padding: "14px 16px", borderRadius: 10,
-              background: i % 2 === 0 ? theme.surface : "transparent",
-              transition: "background 0.2s"
+              background: i % 2 === 0 ? theme.surface : "transparent"
             }}>
               <div style={{
                 width: 32, height: 32, borderRadius: "50%",
@@ -672,15 +622,9 @@ function Pipeline() {
           ))}
         </div>
       </div>
-
       {quarantine.length > 0 && (
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.yellow}44`, padding: 24
-        }}>
-          <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.yellow, letterSpacing: 1, textTransform: "uppercase" }}>
-            ⚠️ Quarantine Records
-          </h3>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.yellow}44`, padding: 24 }}>
+          <h3 style={{ marginBottom: 20, fontSize: 14, fontWeight: 700, color: theme.yellow, letterSpacing: 1, textTransform: "uppercase" }}>⚠️ Quarantine Records</h3>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
@@ -706,6 +650,155 @@ function Pipeline() {
   );
 }
 
+function Transform() {
+  const [status, setStatus] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    axios.get(`${API}/transform/status`)
+      .then(r => setStatus(r.data));
+  }, []);
+
+  const runTransform = () => {
+    setRunning(true);
+    setResult(null);
+    axios.post(`${API}/transform/run`)
+      .then(r => {
+        setResult(r.data);
+        setRunning(false);
+        axios.get(`${API}/transform/status`)
+          .then(r => setStatus(r.data));
+      })
+      .catch(() => setRunning(false));
+  };
+
+  const layerColor = { SILVER: theme.blue, GOLD: theme.yellow };
+
+  return (
+    <div style={{ animation: "slideIn 0.4s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>Transform Pipeline</h1>
+          <p style={{ color: theme.muted, fontSize: 13 }}>Bronze → Silver → Gold — AI builds all models automatically</p>
+        </div>
+        <button onClick={runTransform} disabled={running} style={{
+          padding: "12px 24px", borderRadius: 12, border: "none",
+          background: running ? theme.subtle : `linear-gradient(135deg, ${theme.yellow}, #D97706)`,
+          color: running ? theme.muted : "#000",
+          cursor: running ? "not-allowed" : "pointer",
+          fontWeight: 700, fontSize: 13, fontFamily: "Syne",
+          display: "flex", alignItems: "center", gap: 8
+        }}>
+          <Zap size={16} className={running ? "spinning" : ""}/>
+          {running ? "Running..." : "Run Transformations"}
+        </button>
+      </div>
+
+      {/* Pipeline flow */}
+      <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24, marginBottom: 24 }}>
+        <h3 style={{ marginBottom: 20, fontSize: 12, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Pipeline Architecture</h3>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+          {[
+            { label: "MySQL", sub: "Source", color: theme.blue },
+            { label: "→", sub: "", color: theme.muted },
+            { label: "BRONZE", sub: "Raw data", color: "#CD7F32" },
+            { label: "→", sub: "", color: theme.muted },
+            { label: "QUALITY", sub: "AI checks", color: theme.red },
+            { label: "→", sub: "", color: theme.muted },
+            { label: "SILVER", sub: "Cleaned", color: theme.blue },
+            { label: "→", sub: "", color: theme.muted },
+            { label: "GOLD", sub: "Business", color: theme.yellow },
+            { label: "→", sub: "", color: theme.muted },
+            { label: "CEO", sub: "Dashboard", color: theme.green },
+          ].map((item, i) => (
+            item.label === "→" ? (
+              <span key={i} style={{ fontSize: 20, color: theme.muted }}>→</span>
+            ) : (
+              <div key={i} style={{
+                background: `${item.color}22`,
+                border: `1px solid ${item.color}44`,
+                borderRadius: 10, padding: "10px 16px",
+                textAlign: "center", minWidth: 80
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: item.color }}>{item.label}</div>
+                <div style={{ fontSize: 10, color: theme.muted, marginTop: 2 }}>{item.sub}</div>
+              </div>
+            )
+          ))}
+        </div>
+      </div>
+
+      {/* Table status */}
+      {status?.tables && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 24 }}>
+          {["SILVER", "GOLD"].map(layer => (
+            <div key={layer} style={{
+              background: theme.card, borderRadius: 16,
+              border: `1px solid ${layerColor[layer]}44`, padding: 24
+            }}>
+              <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 700, color: layerColor[layer] }}>
+                {layer === "SILVER" ? "🥈" : "🥇"} {layer} LAYER
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {status.tables.filter(t => t.layer === layer).map((t, i) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 14px", background: theme.surface, borderRadius: 10
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {t.exists
+                        ? <CheckCircle size={14} color={theme.green}/>
+                        : <XCircle size={14} color={theme.red}/>}
+                      <span style={{ fontSize: 11, fontFamily: "JetBrains Mono" }}>{t.table}</span>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: t.exists ? theme.green : theme.red }}>
+                      {t.exists ? `${t.record_count} rows` : "NOT BUILT"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* AI Summary */}
+      {result && (
+        <div style={{
+          background: theme.card, borderRadius: 16,
+          border: `1px solid ${theme.accent}44`,
+          padding: 24, animation: "slideIn 0.4s ease"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <Zap size={16} color={theme.accent}/>
+            <span style={{ fontSize: 12, fontWeight: 700, color: theme.accent, letterSpacing: 1 }}>AI PIPELINE SUMMARY</span>
+            <span style={{ marginLeft: "auto", fontSize: 11, color: theme.green }}>
+              {result.models_succeeded} succeeded · {result.models_failed} failed
+            </span>
+          </div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: theme.text, marginBottom: 16 }}>
+            {result.ai_summary}
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            {[...(result.silver_tables || []), ...(result.gold_tables || [])].map((t, i) => (
+              <div key={i} style={{
+                background: theme.surface, borderRadius: 10,
+                padding: "10px 14px",
+                borderLeft: `3px solid ${t.layer === "SILVER" ? theme.blue : theme.yellow}`
+              }}>
+                <div style={{ fontSize: 10, color: theme.muted, marginBottom: 4, fontFamily: "JetBrains Mono" }}>{t.table}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: theme.text }}>{t.records}</div>
+                <div style={{ fontSize: 10, color: theme.muted }}>records</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Query() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -713,19 +806,18 @@ function Query() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    axios.get(`${API}/query/history`)
-      .then(r => setHistory(r.data.queries || []));
+    axios.get(`${API}/query/history`).then(r => setHistory(r.data.queries || []));
   }, []);
 
   const suggestions = [
-    "Which store has the most orders?",
-    "Show me all orders with negative amounts",
-    "Find top 3 products by revenue with running total",
-    "Show me stores ranked by number of orders",
-    "Find orders where amount is more than average",
-    "Which products have low inventory stock?",
-    "Show me revenue trend by store",
-    "Find all NULL values in orders table",
+    "Which store has highest revenue?",
+    "Show me products with low stock",
+    "What is daily revenue trend?",
+    "Show me store rankings by revenue",
+    "Which stores need inventory reorder?",
+    "What is total revenue across all stores?",
+    "Show me top 3 products by units sold",
+    "Which products have negative margin?",
   ];
 
   const ask = () => {
@@ -736,8 +828,7 @@ function Query() {
       .then(r => {
         setResult(r.data);
         setLoading(false);
-        axios.get(`${API}/query/history`)
-          .then(r => setHistory(r.data.queries || []));
+        axios.get(`${API}/query/history`).then(r => setHistory(r.data.queries || []));
       })
       .catch(e => {
         setResult({ status: "error", message: e.message });
@@ -745,20 +836,13 @@ function Query() {
       });
   };
 
-  const chartColors = [
-    theme.accent, theme.green, theme.yellow,
-    theme.blue, theme.red, "#EC4899", "#14B8A6"
-  ];
-
   const buildChartData = (result) => {
     if (!result?.results?.length) return [];
-    return result.results.slice(0, 10).map((row, i) => {
+    return result.results.slice(0, 10).map((row) => {
       const values = Object.values(row);
-      const keys = Object.keys(row);
       return {
         name: String(values[0]).slice(0, 15),
-        value: parseFloat(values[1]) || i + 1,
-        label: keys[1] || "value"
+        value: parseFloat(values[1]) || 0,
       };
     });
   };
@@ -766,273 +850,125 @@ function Query() {
   return (
     <div style={{ animation: "slideIn 0.4s ease" }}>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>
-          AI Query Engine
-        </h1>
-        <p style={{ color: theme.muted, fontSize: 13 }}>
-          Ask any business question — AI writes SQL, runs it, explains results
-        </p>
+        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>AI Query Engine</h1>
+        <p style={{ color: theme.muted, fontSize: 13 }}>Ask any business question — AI writes SQL, runs it, explains results</p>
       </div>
-
-      {/* Question Input */}
-      <div style={{
-        background: theme.card, borderRadius: 16,
-        border: `1px solid ${theme.border}`, padding: 24, marginBottom: 16
-      }}>
+      <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24, marginBottom: 16 }}>
         <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-          <input
-            value={question}
-            onChange={e => setQuestion(e.target.value)}
+          <input value={question} onChange={e => setQuestion(e.target.value)}
             onKeyDown={e => e.key === "Enter" && ask()}
-            placeholder="Ask anything... e.g. Which store had highest revenue this week?"
+            placeholder="Ask anything... e.g. Which store had highest revenue?"
             style={{
               flex: 1, padding: "14px 18px",
-              background: theme.surface,
-              border: `1px solid ${theme.border}`,
+              background: theme.surface, border: `1px solid ${theme.border}`,
               borderRadius: 12, color: theme.text,
-              fontSize: 14, fontFamily: "Syne",
-              outline: "none"
+              fontSize: 14, fontFamily: "Syne", outline: "none"
             }}
             onFocus={e => e.target.style.borderColor = theme.accent}
             onBlur={e => e.target.style.borderColor = theme.border}
           />
           <button onClick={ask} disabled={loading || !question.trim()} style={{
             padding: "14px 28px", borderRadius: 12, border: "none",
-            background: loading
-              ? theme.subtle
-              : `linear-gradient(135deg, ${theme.accent}, ${theme.accent2})`,
+            background: loading ? theme.subtle : `linear-gradient(135deg, ${theme.accent}, ${theme.accent2})`,
             color: theme.text, cursor: loading ? "not-allowed" : "pointer",
             fontWeight: 700, fontSize: 13, fontFamily: "Syne",
-            display: "flex", alignItems: "center", gap: 8,
-            minWidth: 120
+            display: "flex", alignItems: "center", gap: 8, minWidth: 120
           }}>
             <Zap size={16} className={loading ? "spinning" : ""}/>
             {loading ? "Thinking..." : "Ask AI"}
           </button>
         </div>
-
-        {/* Suggestion chips */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {suggestions.map((s, i) => (
             <button key={i} onClick={() => setQuestion(s)} style={{
               padding: "6px 14px", borderRadius: 20,
-              background: `${theme.accent}11`,
-              border: `1px solid ${theme.accent}33`,
-              color: theme.muted, cursor: "pointer",
-              fontSize: 11, fontFamily: "Syne",
-              transition: "all 0.2s"
+              background: `${theme.accent}11`, border: `1px solid ${theme.accent}33`,
+              color: theme.muted, cursor: "pointer", fontSize: 11, fontFamily: "Syne"
             }}
-            onMouseEnter={e => {
-              e.target.style.background = `${theme.accent}22`;
-              e.target.style.color = theme.text;
-            }}
-            onMouseLeave={e => {
-              e.target.style.background = `${theme.accent}11`;
-              e.target.style.color = theme.muted;
-            }}>
+            onMouseEnter={e => { e.target.style.background = `${theme.accent}22`; e.target.style.color = theme.text; }}
+            onMouseLeave={e => { e.target.style.background = `${theme.accent}11`; e.target.style.color = theme.muted; }}>
               {s}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Loading state */}
       {loading && (
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.accent}44`,
-          padding: 32, textAlign: "center", marginBottom: 16
-        }}>
-          <div style={{ marginBottom: 12 }}>
-            <Zap size={32} color={theme.accent} className="spinning"
-              style={{ margin: "0 auto" }}/>
-          </div>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>
-            DataForge AI is thinking...
-          </div>
-          <div style={{ fontSize: 12, color: theme.muted }}>
-            Reading your question → Writing SQL → Running on Snowflake → Explaining results
-          </div>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.accent}44`, padding: 32, textAlign: "center", marginBottom: 16 }}>
+          <Zap size={32} color={theme.accent} className="spinning" style={{ margin: "0 auto 12px" }}/>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>DataForge AI is thinking...</div>
+          <div style={{ fontSize: 12, color: theme.muted }}>Reading question → Writing SQL → Running on Snowflake → Explaining results</div>
         </div>
       )}
 
-      {/* Results */}
       {result && !loading && (
         <div style={{ animation: "slideIn 0.4s ease" }}>
-
           {result.status === "error" ? (
-            <div style={{
-              background: `${theme.red}11`,
-              border: `1px solid ${theme.red}44`,
-              borderRadius: 16, padding: 24, marginBottom: 16
-            }}>
-              <div style={{ color: theme.red, fontWeight: 700, marginBottom: 8 }}>
-                ❌ Query Error
-              </div>
-              <div style={{ fontSize: 13, color: theme.muted }}>
-                {result.message}
-              </div>
+            <div style={{ background: `${theme.red}11`, border: `1px solid ${theme.red}44`, borderRadius: 16, padding: 24, marginBottom: 16 }}>
+              <div style={{ color: theme.red, fontWeight: 700, marginBottom: 8 }}>❌ Query Error</div>
+              <div style={{ fontSize: 13, color: theme.muted }}>{result.message}</div>
             </div>
           ) : (
             <>
-              {/* AI Answer Card */}
               <div style={{
                 background: `linear-gradient(135deg, ${theme.accent}15, ${theme.accent2}15)`,
                 border: `1px solid ${theme.accent}44`,
                 borderRadius: 16, padding: 24, marginBottom: 16
               }}>
-                <div style={{
-                  display: "flex", alignItems: "center",
-                  gap: 8, marginBottom: 12
-                }}>
-                  <div style={{
-                    background: `${theme.accent}22`,
-                    borderRadius: 8, padding: 6
-                  }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <div style={{ background: `${theme.accent}22`, borderRadius: 8, padding: 6 }}>
                     <Zap size={16} color={theme.accent}/>
                   </div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700,
-                    color: theme.accent, letterSpacing: 1
-                  }}>
-                    AI ANSWER
-                  </span>
-                  <span style={{
-                    fontSize: 10, color: theme.muted,
-                    marginLeft: "auto"
-                  }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: theme.accent, letterSpacing: 1 }}>AI ANSWER</span>
+                  <span style={{ fontSize: 10, color: theme.muted, marginLeft: "auto" }}>
                     {result.total_rows} rows · {result.execution_time_ms}ms
                   </span>
                 </div>
-                <div style={{
-                  fontSize: 15, lineHeight: 1.7,
-                  color: theme.text, fontWeight: 500
-                }}>
-                  {result.explanation}
-                </div>
+                <div style={{ fontSize: 15, lineHeight: 1.7, color: theme.text, fontWeight: 500 }}>{result.explanation}</div>
               </div>
 
-              {/* Chart + Table side by side */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 16, marginBottom: 16
-              }}>
-                {/* Chart */}
-                <div style={{
-                  background: theme.card, borderRadius: 16,
-                  border: `1px solid ${theme.border}`, padding: 24
-                }}>
-                  <h3 style={{
-                    marginBottom: 16, fontSize: 12,
-                    fontWeight: 700, color: theme.muted,
-                    letterSpacing: 1, textTransform: "uppercase"
-                  }}>
-                    Visualisation
-                  </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
+                  <h3 style={{ marginBottom: 16, fontSize: 12, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Visualisation</h3>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={buildChartData(result)}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={theme.border}
-                      />
-                      <XAxis
-                        dataKey="name"
-                        stroke={theme.muted}
-                        fontSize={10}
-                        angle={-20}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.border}/>
+                      <XAxis dataKey="name" stroke={theme.muted} fontSize={10} angle={-20}/>
                       <YAxis stroke={theme.muted} fontSize={10}/>
-                      <Tooltip contentStyle={{
-                        background: theme.card,
-                        border: `1px solid ${theme.border}`,
-                        borderRadius: 8, fontSize: 12
-                      }}/>
-                      <Bar
-                        dataKey="value"
-                        radius={[4, 4, 0, 0]}
-                        fill={theme.accent}
-                      />
+                      <Tooltip contentStyle={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 12 }}/>
+                      <Bar dataKey="value" radius={[4,4,0,0]} fill={theme.accent}/>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-
-                {/* Generated SQL */}
-                <div style={{
-                  background: theme.card, borderRadius: 16,
-                  border: `1px solid ${theme.border}`, padding: 24
-                }}>
-                  <h3 style={{
-                    marginBottom: 12, fontSize: 12,
-                    fontWeight: 700, color: theme.muted,
-                    letterSpacing: 1, textTransform: "uppercase"
-                  }}>
-                    Generated SQL
-                  </h3>
-                  <pre style={{
-                    fontSize: 11, color: theme.accent,
-                    fontFamily: "JetBrains Mono",
-                    whiteSpace: "pre-wrap", lineHeight: 1.6,
-                    overflow: "auto", maxHeight: 200
-                  }}>
+                <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
+                  <h3 style={{ marginBottom: 12, fontSize: 12, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Generated SQL</h3>
+                  <pre style={{ fontSize: 11, color: theme.accent, fontFamily: "JetBrains Mono", whiteSpace: "pre-wrap", lineHeight: 1.6, overflow: "auto", maxHeight: 200 }}>
                     {result.generated_sql}
                   </pre>
                 </div>
               </div>
 
-              {/* Results Table */}
               {result.results?.length > 0 && (
-                <div style={{
-                  background: theme.card, borderRadius: 16,
-                  border: `1px solid ${theme.border}`,
-                  padding: 24, marginBottom: 16
-                }}>
-                  <h3 style={{
-                    marginBottom: 16, fontSize: 12,
-                    fontWeight: 700, color: theme.muted,
-                    letterSpacing: 1, textTransform: "uppercase"
-                  }}>
-                    Results — {result.total_rows} rows
-                  </h3>
+                <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24, marginBottom: 16 }}>
+                  <h3 style={{ marginBottom: 16, fontSize: 12, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Results — {result.total_rows} rows</h3>
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{
-                      width: "100%", borderCollapse: "collapse"
-                    }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
-                        <tr style={{
-                          borderBottom: `1px solid ${theme.border}`
-                        }}>
+                        <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
                           {result.columns?.map(col => (
-                            <th key={col} style={{
-                              padding: "8px 12px", textAlign: "left",
-                              fontSize: 11, color: theme.muted,
-                              fontWeight: 600, letterSpacing: 1,
-                              textTransform: "uppercase",
-                              whiteSpace: "nowrap"
-                            }}>
-                              {col}
-                            </th>
+                            <th key={col} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, color: theme.muted, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>{col}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {result.results.slice(0, 20).map((row, i) => (
-                          <tr key={i} style={{
-                            borderBottom: `1px solid ${theme.border}22`
-                          }}>
+                          <tr key={i} style={{ borderBottom: `1px solid ${theme.border}22` }}>
                             {Object.values(row).map((val, j) => (
                               <td key={j} style={{
-                                padding: "10px 12px",
-                                fontSize: 12,
-                                color: String(val).startsWith("-")
-                                  ? theme.red
-                                  : theme.text,
-                                fontFamily: !isNaN(val)
-                                  ? "JetBrains Mono"
-                                  : "Syne"
-                              }}>
-                                {val}
-                              </td>
+                                padding: "10px 12px", fontSize: 12,
+                                color: String(val).startsWith("-") ? theme.red : theme.text,
+                                fontFamily: !isNaN(val) ? "JetBrains Mono" : "Syne"
+                              }}>{val}</td>
                             ))}
                           </tr>
                         ))}
@@ -1046,42 +982,21 @@ function Query() {
         </div>
       )}
 
-      {/* Query History */}
       {history.length > 0 && (
-        <div style={{
-          background: theme.card, borderRadius: 16,
-          border: `1px solid ${theme.border}`, padding: 24
-        }}>
-          <h3 style={{
-            marginBottom: 16, fontSize: 12,
-            fontWeight: 700, color: theme.muted,
-            letterSpacing: 1, textTransform: "uppercase"
-          }}>
-            Query History
-          </h3>
-          <div style={{
-            display: "flex", flexDirection: "column", gap: 8
-          }}>
+        <div style={{ background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}`, padding: 24 }}>
+          <h3 style={{ marginBottom: 16, fontSize: 12, fontWeight: 700, color: theme.muted, letterSpacing: 1, textTransform: "uppercase" }}>Query History</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {history.slice(0, 5).map((h, i) => (
-              <div key={i} onClick={() => setQuestion(h.question)}
-                style={{
-                  display: "flex", alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "10px 14px",
-                  background: theme.surface, borderRadius: 10,
-                  cursor: "pointer", transition: "background 0.2s"
-                }}
-                onMouseEnter={e =>
-                  e.currentTarget.style.background = theme.subtle
-                }
-                onMouseLeave={e =>
-                  e.currentTarget.style.background = theme.surface
-                }>
+              <div key={i} onClick={() => setQuestion(h.question)} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "10px 14px", background: theme.surface, borderRadius: 10, cursor: "pointer"
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = theme.subtle}
+              onMouseLeave={e => e.currentTarget.style.background = theme.surface}>
                 <div>
                   <div style={{ fontSize: 13 }}>{h.question}</div>
                   <div style={{ fontSize: 11, color: theme.muted, marginTop: 2 }}>
-                    {h.rows_returned} rows · {h.execution_time_ms}ms
-                    · {h.asked_at?.slice(0, 16)}
+                    {h.rows_returned} rows · {h.execution_time_ms}ms · {h.asked_at?.slice(0, 16)}
                   </div>
                 </div>
                 <ChevronRight size={14} color={theme.muted}/>
@@ -1102,6 +1017,7 @@ export default function App() {
     sources: <Sources/>,
     quality: <Quality/>,
     pipeline: <Pipeline/>,
+    transform: <Transform/>,
     query: <Query/>,
   };
 

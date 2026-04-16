@@ -2,11 +2,14 @@
 import requests
 
 questions = [
-    "Show me store performance ranked by revenue from GOLD_STORE_PERFORMANCE",
-    "Which products have low stock from GOLD_INVENTORY_STATUS",
-    "Show me daily revenue trend from GOLD_DAILY_REVENUE",
-    "Which products have negative margin from GOLD_PRODUCT_ANALYSIS",
-    "Which store achieved highest target percentage",
+    "Which store has highest revenue?",
+    "Show me products with low stock",
+    "What is daily revenue trend?",
+    "Which products have negative margin?",
+    "Show me store rankings by revenue",
+    "Which stores need inventory reorder?",
+    "What is total revenue across all stores?",
+    "Show me top 3 products by units sold",
 ]
 
 for q in questions:
@@ -17,8 +20,9 @@ for q in questions:
     )
     data = r.json()
     if data.get("status") == "success":
-        print(f"Answer: {data.get('explanation')}")
+        print(f"Table used: {data.get('generated_sql', '')[:60]}...")
         print(f"Rows: {data.get('total_rows')}")
+        print(f"Answer: {data.get('explanation')}")
     else:
         print(f"Error: {data.get('message')}")
     print("-" * 50)
