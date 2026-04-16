@@ -1,16 +1,12 @@
 
 import requests
-import json
 
 questions = [
-    "Which store has the most orders?",
-    "Show me all orders with negative amounts",
-    "Find top 3 products by revenue with running total",
-    "Show me stores ranked by number of orders with rank number",
-    "Find all orders where total amount is more than average order value",
-    "Show me total revenue per store joined with store name",
-    "Which products have low inventory stock?",
-    "Show me month over month order count trend",
+    "Show me store performance ranked by revenue from GOLD_STORE_PERFORMANCE",
+    "Which products have low stock from GOLD_INVENTORY_STATUS",
+    "Show me daily revenue trend from GOLD_DAILY_REVENUE",
+    "Which products have negative margin from GOLD_PRODUCT_ANALYSIS",
+    "Which store achieved highest target percentage",
 ]
 
 for q in questions:
@@ -21,9 +17,8 @@ for q in questions:
     )
     data = r.json()
     if data.get("status") == "success":
-        print(f"SQL: {data.get('generated_sql')}")
-        print(f"Rows: {data.get('total_rows')}")
         print(f"Answer: {data.get('explanation')}")
+        print(f"Rows: {data.get('total_rows')}")
     else:
         print(f"Error: {data.get('message')}")
-    print("=" * 60)
+    print("-" * 50)

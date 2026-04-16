@@ -9,7 +9,8 @@ from connectors.csv_connector import load_csv_to_bronze
 from connectors.mysql_connector import sync_mysql_table_to_bronze, get_mysql_tables
 from agents.quality_agent import run_quality_checks
 from agents.query_agent import run_ai_query, get_query_history, get_available_tables
-
+from agents.transform_agent import run_all_transformations, get_transformation_status
+from scheduler import start_scheduler
 load_dotenv()
 
 app = FastAPI(
@@ -17,6 +18,8 @@ app = FastAPI(
     description="AI-powered end-to-end data pipeline for E.L.F Beauty",
     version="2.0.0"
 )
+# Start automated pipeline scheduler
+scheduler = start_scheduler()
 
 app.add_middleware(
     CORSMiddleware,
@@ -346,5 +349,26 @@ def available_tables():
     try:
         tables = get_available_tables()
         return {"tables": tables, "count": len(tables)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# ─────────────────────────────────────────
+# TRANSFORMATION ROUTES
+# ─────────────────────────────────────────
+
+@app.post("/transform/run")
+def run_transformations():
+    """Run Bronze → Silver → Gold pipeline"""
+    try:
+        result = run_all_transformations()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/transform/status")
+def transformation_status():
+    """Get status of all Silver and Gold tables"""
+    try:
+        return get_transformation_status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
