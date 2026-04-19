@@ -1,0 +1,7 @@
+
+.env
+__pycache__/
+*.pyc
+dataforge_env/
+*.log
+.DS_Store
