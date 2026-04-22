@@ -11,7 +11,7 @@ import {
   RefreshCw, Zap, TrendingUp, ChevronRight, Table, Cpu
 } from "lucide-react";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://dataforge-ai-production-d2c7.up.railway.app";
 
 const theme = {
   bg: "#050810",

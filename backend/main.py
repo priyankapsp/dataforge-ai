@@ -36,7 +36,10 @@ def get_snowflake_connection():
         password=os.getenv("SNOWFLAKE_PASSWORD"),
         database=os.getenv("SNOWFLAKE_DATABASE"),
         warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA")
+        schema=os.getenv("SNOWFLAKE_SCHEMA"),
+        login_timeout=10,
+        network_timeout=30,
+        
     )
 
 # ─────────────────────────────────────────
