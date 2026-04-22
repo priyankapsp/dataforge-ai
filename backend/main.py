@@ -29,19 +29,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_snowflake_connection():
-    return snowflake.connector.connect(
-        account=os.getenv("SNOWFLAKE_ACCOUNT"),
-        user=os.getenv("SNOWFLAKE_USER"),
-        password=os.getenv("SNOWFLAKE_PASSWORD"),
-        database=os.getenv("SNOWFLAKE_DATABASE"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA"),
-        login_timeout=10,
-        network_timeout=30,
-        
-    )
 
+_snowflake_conn = None
+
+def get_snowflake_connection():
+    global _snowflake_conn
+    try:
+        # Reuse existing connection if alive
+        if _snowflake_conn and not _snowflake_conn.is_closed():
+            return _snowflake_conn
+        _snowflake_conn = snowflake.connector.connect(
+            account=os.getenv("SNOWFLAKE_ACCOUNT"),
+            user=os.getenv("SNOWFLAKE_USER"),
+            password=os.getenv("SNOWFLAKE_PASSWORD"),
+            database=os.getenv("SNOWFLAKE_DATABASE"),
+            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+            schema=os.getenv("SNOWFLAKE_SCHEMA"),
+            login_timeout=10,
+            network_timeout=30,
+        )
+        return _snowflake_conn
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Snowflake connection failed: {str(e)}"
+        )
 # ─────────────────────────────────────────
 # BASIC ROUTES
 # ─────────────────────────────────────────
