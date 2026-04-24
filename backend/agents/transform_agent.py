@@ -17,7 +17,9 @@ def get_snowflake_connection():
         password=os.getenv("SNOWFLAKE_PASSWORD"),
         database=os.getenv("SNOWFLAKE_DATABASE"),
         warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA")
+        schema=os.getenv("SNOWFLAKE_SCHEMA"),
+        login_timeout=10,
+        network_timeout=30,
     )
 
 def run_model(cursor, table_name: str, sql: str) -> dict:
@@ -123,7 +125,7 @@ WHERE STORE_ID IS NOT NULL
 """
 
 # ─────────────────────────────────────────
-# GOLD LAYER
+# GOLD LAYER — EXISTING MODELS
 # ─────────────────────────────────────────
 
 GOLD_STORE_PERFORMANCE = """
@@ -303,13 +305,179 @@ CREATE TABLE IF NOT EXISTS SCD2_ELF_PRODUCTS (
 """
 
 # ─────────────────────────────────────────
+# GOLD LAYER — ELF BEAUTY SPECIFIC MODELS
+# ─────────────────────────────────────────
+
+GOLD_ELF_REVENUE_BY_CHANNEL = """
+CREATE OR REPLACE TABLE GOLD_ELF_REVENUE_BY_CHANNEL AS
+SELECT
+    s.STORE_TYPE as CHANNEL,
+    COUNT(DISTINCT o.ORDER_ID) as TOTAL_ORDERS,
+    SUM(o.TOTAL_AMOUNT) as TOTAL_REVENUE,
+    AVG(o.TOTAL_AMOUNT) as AVG_ORDER_VALUE,
+    COUNT(DISTINCT o.CUSTOMER_ID) as UNIQUE_CUSTOMERS,
+    SUM(o.QUANTITY) as TOTAL_UNITS_SOLD,
+    ROUND(SUM(o.TOTAL_AMOUNT) / NULLIF(
+        SUM(SUM(o.TOTAL_AMOUNT)) OVER (), 0
+    ) * 100, 2) as REVENUE_SHARE_PCT,
+    CURRENT_TIMESTAMP() as _GOLD_LOADED_AT
+FROM SLV_ELF_ORDERS o
+JOIN SLV_ELF_STORES s ON o.STORE_ID = s.STORE_ID
+GROUP BY s.STORE_TYPE
+ORDER BY TOTAL_REVENUE DESC
+"""
+
+GOLD_ELF_TARIFF_IMPACT = """
+CREATE OR REPLACE TABLE GOLD_ELF_TARIFF_IMPACT AS
+SELECT
+    s.COUNTRY,
+    s.STORE_TYPE,
+    COUNT(DISTINCT o.ORDER_ID) as TOTAL_ORDERS,
+    SUM(o.TOTAL_AMOUNT) as TOTAL_REVENUE,
+    AVG(o.TOTAL_AMOUNT) as AVG_ORDER_VALUE,
+    ROUND(SUM(o.TOTAL_AMOUNT) * 0.15, 2) as ESTIMATED_TARIFF_COST,
+    ROUND(SUM(o.TOTAL_AMOUNT) * 0.85, 2) as REVENUE_AFTER_TARIFF,
+    ROUND(SUM(o.TOTAL_AMOUNT) * 0.60, 2) as HIGH_TARIFF_SCENARIO,
+    ROUND(SUM(o.TOTAL_AMOUNT) * 0.40, 2) as REVENUE_AFTER_HIGH_TARIFF,
+    CASE
+        WHEN s.COUNTRY = 'USA' THEN 'HIGH_RISK'
+        WHEN s.COUNTRY = 'CHINA' THEN 'CRITICAL_RISK'
+        ELSE 'LOW_RISK'
+    END as TARIFF_RISK_LEVEL,
+    CURRENT_TIMESTAMP() as _GOLD_LOADED_AT
+FROM SLV_ELF_ORDERS o
+JOIN SLV_ELF_STORES s ON o.STORE_ID = s.STORE_ID
+GROUP BY s.COUNTRY, s.STORE_TYPE
+ORDER BY TOTAL_REVENUE DESC
+"""
+
+GOLD_ELF_STORE_PERFORMANCE = """
+CREATE OR REPLACE TABLE GOLD_ELF_STORE_PERFORMANCE AS
+SELECT
+    s.STORE_ID,
+    s.STORE_NAME,
+    s.CITY,
+    s.STATE,
+    s.COUNTRY,
+    s.STORE_TYPE,
+    s.MONTHLY_TARGET,
+    COUNT(DISTINCT o.ORDER_ID) as TOTAL_ORDERS,
+    SUM(o.TOTAL_AMOUNT) as ACTUAL_REVENUE,
+    ROUND(s.MONTHLY_TARGET - SUM(o.TOTAL_AMOUNT), 2) as TARGET_GAP,
+    ROUND(SUM(o.TOTAL_AMOUNT) / NULLIF(s.MONTHLY_TARGET, 0) * 100, 2) as TARGET_ACHIEVEMENT_PCT,
+    COUNT(DISTINCT o.CUSTOMER_ID) as UNIQUE_CUSTOMERS,
+    AVG(o.TOTAL_AMOUNT) as AVG_ORDER_VALUE,
+    RANK() OVER (ORDER BY SUM(o.TOTAL_AMOUNT) DESC) as REVENUE_RANK,
+    CASE
+        WHEN SUM(o.TOTAL_AMOUNT) >= s.MONTHLY_TARGET THEN 'ON_TRACK'
+        WHEN SUM(o.TOTAL_AMOUNT) >= s.MONTHLY_TARGET * 0.8 THEN 'AT_RISK'
+        ELSE 'BELOW_TARGET'
+    END as PERFORMANCE_STATUS,
+    CURRENT_TIMESTAMP() as _GOLD_LOADED_AT
+FROM SLV_ELF_STORES s
+LEFT JOIN SLV_ELF_ORDERS o ON s.STORE_ID = o.STORE_ID
+GROUP BY
+    s.STORE_ID, s.STORE_NAME, s.CITY,
+    s.STATE, s.COUNTRY, s.STORE_TYPE,
+    s.MONTHLY_TARGET
+ORDER BY ACTUAL_REVENUE DESC NULLS LAST
+"""
+
+GOLD_ELF_MARKETING_ROI = """
+CREATE OR REPLACE TABLE GOLD_ELF_MARKETING_ROI AS
+SELECT
+    s.STORE_TYPE as CHANNEL,
+    s.STATE as REGION,
+    s.COUNTRY,
+    COUNT(DISTINCT o.CUSTOMER_ID) as TOTAL_CUSTOMERS,
+    COUNT(DISTINCT o.ORDER_ID) as TOTAL_ORDERS,
+    SUM(o.TOTAL_AMOUNT) as TOTAL_REVENUE,
+    AVG(o.TOTAL_AMOUNT) as AVG_ORDER_VALUE,
+    ROUND(COUNT(DISTINCT o.ORDER_ID) /
+        NULLIF(COUNT(DISTINCT o.CUSTOMER_ID), 0), 2) as ORDERS_PER_CUSTOMER,
+    ROUND(SUM(o.TOTAL_AMOUNT) /
+        NULLIF(COUNT(DISTINCT o.CUSTOMER_ID), 0), 2) as REVENUE_PER_CUSTOMER,
+    CASE
+        WHEN AVG(o.TOTAL_AMOUNT) >= 100 THEN 'HIGH_VALUE_CHANNEL'
+        WHEN AVG(o.TOTAL_AMOUNT) >= 50 THEN 'MEDIUM_VALUE_CHANNEL'
+        ELSE 'LOW_VALUE_CHANNEL'
+    END as CHANNEL_TIER,
+    CURRENT_TIMESTAMP() as _GOLD_LOADED_AT
+FROM SLV_ELF_ORDERS o
+JOIN SLV_ELF_STORES s ON o.STORE_ID = s.STORE_ID
+GROUP BY s.STORE_TYPE, s.STATE, s.COUNTRY
+ORDER BY TOTAL_REVENUE DESC
+"""
+
+GOLD_ELF_PRODUCT_MARGINS = """
+CREATE OR REPLACE TABLE GOLD_ELF_PRODUCT_MARGINS AS
+SELECT
+    o.PRODUCT_SKU,
+    MAX(i.PRODUCT_NAME) as PRODUCT_NAME,
+    COUNT(DISTINCT o.ORDER_ID) as TOTAL_ORDERS,
+    SUM(o.QUANTITY) as TOTAL_UNITS_SOLD,
+    AVG(o.UNIT_PRICE) as AVG_SELLING_PRICE,
+    AVG(i.UNIT_COST) as AVG_UNIT_COST,
+    SUM(o.TOTAL_AMOUNT) as TOTAL_REVENUE,
+    ROUND(AVG(o.UNIT_PRICE) - AVG(i.UNIT_COST), 2) as GROSS_MARGIN_PER_UNIT,
+    ROUND((AVG(o.UNIT_PRICE) - AVG(i.UNIT_COST)) /
+        NULLIF(AVG(o.UNIT_PRICE), 0) * 100, 2) as GROSS_MARGIN_PCT,
+    SUM(o.QUANTITY * (o.UNIT_PRICE - COALESCE(i.UNIT_COST, 0))) as TOTAL_GROSS_PROFIT,
+    CASE
+        WHEN SUM(o.TOTAL_AMOUNT) >= 10000 THEN 'HERO_PRODUCT'
+        WHEN SUM(o.TOTAL_AMOUNT) >= 5000 THEN 'STRONG_PRODUCT'
+        WHEN SUM(o.TOTAL_AMOUNT) >= 1000 THEN 'GROWING_PRODUCT'
+        ELSE 'WEAK_PRODUCT'
+    END as PRODUCT_TIER,
+    RANK() OVER (ORDER BY SUM(o.TOTAL_AMOUNT) DESC) as REVENUE_RANK,
+    CURRENT_TIMESTAMP() as _GOLD_LOADED_AT
+FROM SLV_ELF_ORDERS o
+LEFT JOIN SLV_ELF_INVENTORY i ON o.PRODUCT_SKU = i.PRODUCT_SKU
+GROUP BY o.PRODUCT_SKU
+ORDER BY TOTAL_REVENUE DESC
+"""
+
+GOLD_ELF_CUSTOMER_360 = """
+CREATE OR REPLACE TABLE GOLD_ELF_CUSTOMER_360 AS
+SELECT
+    o.CUSTOMER_ID,
+    COUNT(DISTINCT o.ORDER_ID) as TOTAL_ORDERS,
+    SUM(o.TOTAL_AMOUNT) as LIFETIME_VALUE,
+    AVG(o.TOTAL_AMOUNT) as AVG_ORDER_VALUE,
+    MIN(o.ORDER_DATE) as FIRST_ORDER_DATE,
+    MAX(o.ORDER_DATE) as LAST_ORDER_DATE,
+    DATEDIFF('day', MIN(o.ORDER_DATE), MAX(o.ORDER_DATE)) as CUSTOMER_AGE_DAYS,
+    COUNT(DISTINCT o.PRODUCT_SKU) as UNIQUE_PRODUCTS_BOUGHT,
+    COUNT(DISTINCT o.STORE_ID) as STORES_VISITED,
+    SUM(o.QUANTITY) as TOTAL_UNITS_PURCHASED,
+    CASE
+        WHEN SUM(o.TOTAL_AMOUNT) >= 10000 THEN 'VIP'
+        WHEN SUM(o.TOTAL_AMOUNT) >= 5000 THEN 'LOYAL'
+        WHEN SUM(o.TOTAL_AMOUNT) >= 1000 THEN 'REGULAR'
+        ELSE 'NEW'
+    END as CUSTOMER_SEGMENT,
+    CASE
+        WHEN DATEDIFF('day', MAX(o.ORDER_DATE), CURRENT_DATE()) <= 30
+            THEN 'ACTIVE'
+        WHEN DATEDIFF('day', MAX(o.ORDER_DATE), CURRENT_DATE()) <= 90
+            THEN 'AT_RISK'
+        ELSE 'CHURNED'
+    END as ACTIVITY_STATUS,
+    RANK() OVER (ORDER BY SUM(o.TOTAL_AMOUNT) DESC) as VALUE_RANK,
+    CURRENT_TIMESTAMP() as _GOLD_LOADED_AT
+FROM SLV_ELF_ORDERS o
+GROUP BY o.CUSTOMER_ID
+ORDER BY LIFETIME_VALUE DESC
+"""
+
+# ─────────────────────────────────────────
 # MAIN ORCHESTRATION
 # ─────────────────────────────────────────
 
 def run_all_transformations() -> dict:
     """
     Run complete Bronze → Silver → Gold pipeline
-    All 28 dbt-equivalent features included
+    Includes all ELF Beauty specific Gold models
     AI explains every step
     """
     run_id = str(uuid.uuid4())[:8]
@@ -318,14 +486,26 @@ def run_all_transformations() -> dict:
     errors = []
 
     # Models in correct dependency order
+    # Silver first, then existing Gold, then ELF Gold
     models = [
-        ("SILVER", "SLV_ELF_STORES",           SILVER_STORES),
-        ("SILVER", "SLV_ELF_ORDERS",            SILVER_ORDERS),
-        ("SILVER", "SLV_ELF_INVENTORY",         SILVER_INVENTORY),
-        ("GOLD",   "GOLD_STORE_PERFORMANCE",    GOLD_STORE_PERFORMANCE),
-        ("GOLD",   "GOLD_PRODUCT_ANALYSIS",     GOLD_PRODUCT_ANALYSIS),
-        ("GOLD",   "GOLD_DAILY_REVENUE",        GOLD_DAILY_REVENUE),
-        ("GOLD",   "GOLD_INVENTORY_STATUS",     GOLD_INVENTORY_STATUS),
+        # ── SILVER LAYER ──
+        ("SILVER", "SLV_ELF_STORES",                SILVER_STORES),
+        ("SILVER", "SLV_ELF_ORDERS",                SILVER_ORDERS),
+        ("SILVER", "SLV_ELF_INVENTORY",             SILVER_INVENTORY),
+
+        # ── EXISTING GOLD LAYER ──
+        ("GOLD",   "GOLD_STORE_PERFORMANCE",        GOLD_STORE_PERFORMANCE),
+        ("GOLD",   "GOLD_PRODUCT_ANALYSIS",         GOLD_PRODUCT_ANALYSIS),
+        ("GOLD",   "GOLD_DAILY_REVENUE",            GOLD_DAILY_REVENUE),
+        ("GOLD",   "GOLD_INVENTORY_STATUS",         GOLD_INVENTORY_STATUS),
+
+        # ── ELF BEAUTY GOLD LAYER ──
+        ("GOLD",   "GOLD_ELF_REVENUE_BY_CHANNEL",   GOLD_ELF_REVENUE_BY_CHANNEL),
+        ("GOLD",   "GOLD_ELF_TARIFF_IMPACT",        GOLD_ELF_TARIFF_IMPACT),
+        ("GOLD",   "GOLD_ELF_STORE_PERFORMANCE",    GOLD_ELF_STORE_PERFORMANCE),
+        ("GOLD",   "GOLD_ELF_MARKETING_ROI",        GOLD_ELF_MARKETING_ROI),
+        ("GOLD",   "GOLD_ELF_PRODUCT_MARGINS",      GOLD_ELF_PRODUCT_MARGINS),
+        ("GOLD",   "GOLD_ELF_CUSTOMER_360",         GOLD_ELF_CUSTOMER_360),
     ]
 
     try:
@@ -336,7 +516,9 @@ def run_all_transformations() -> dict:
         cursor.execute(SCD2_PRODUCTS_SETUP)
 
         print(f"\n🚀 DataForge AI Transform Pipeline — Run {run_id}")
-        print("=" * 50)
+        print("=" * 60)
+        print(f"Running {len(models)} models (3 Silver + 4 Gold + 6 ELF Gold)")
+        print("=" * 60)
 
         for layer, table_name, sql in models:
             result = run_model(cursor, table_name, sql)
@@ -356,7 +538,7 @@ def run_all_transformations() -> dict:
     total_duration = (datetime.now() - start_time).seconds
     total_records = sum(r["records"] for r in results)
 
-    print(f"\n{'='*50}")
+    print(f"\n{'='*60}")
     print(f"✅ Complete: {len(results)} models | {total_records} records | {total_duration}s")
 
     ai_summary = generate_summary(results, errors, total_duration)
@@ -380,13 +562,22 @@ def get_transformation_status() -> dict:
         cursor = conn.cursor()
 
         tables = [
+            # Silver
             ("SILVER", "SLV_ELF_STORES"),
             ("SILVER", "SLV_ELF_ORDERS"),
             ("SILVER", "SLV_ELF_INVENTORY"),
+            # Existing Gold
             ("GOLD",   "GOLD_STORE_PERFORMANCE"),
             ("GOLD",   "GOLD_PRODUCT_ANALYSIS"),
             ("GOLD",   "GOLD_DAILY_REVENUE"),
             ("GOLD",   "GOLD_INVENTORY_STATUS"),
+            # ELF Gold
+            ("GOLD",   "GOLD_ELF_REVENUE_BY_CHANNEL"),
+            ("GOLD",   "GOLD_ELF_TARIFF_IMPACT"),
+            ("GOLD",   "GOLD_ELF_STORE_PERFORMANCE"),
+            ("GOLD",   "GOLD_ELF_MARKETING_ROI"),
+            ("GOLD",   "GOLD_ELF_PRODUCT_MARGINS"),
+            ("GOLD",   "GOLD_ELF_CUSTOMER_360"),
         ]
 
         status = []
@@ -420,28 +611,36 @@ def generate_summary(results, errors, duration) -> str:
     try:
         success_tables = [r["table"] for r in results]
         total_records = sum(r["records"] for r in results)
+        elf_gold = [r for r in results if "ELF" in r["table"]]
 
         prompt = f"""You are DataForge AI transform engine for E.L.F Beauty.
 
 Pipeline completed:
 - Models succeeded: {len(results)} — {success_tables}
 - Models failed: {len(errors)}
+- ELF Gold models built: {len(elf_gold)}
 - Total records across all tables: {total_records}
 - Duration: {duration} seconds
 
-Write 3 sentences:
+Write 4 sentences:
 1. What Silver cleaned (bad records removed)
-2. What Gold built for CEO analytics
-3. What CEO can now query
+2. What existing Gold models built
+3. What new ELF Gold models built (Revenue by Channel, Tariff Impact,
+   Store Performance, Marketing ROI, Product Margins, Customer 360)
+4. What ELF Beauty CEO can now query and decide
 
-Be specific about E.L.F Beauty.
+Be specific about E.L.F Beauty business value.
 End with: STATUS: COMPLETE or PARTIAL"""
 
         response = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
-            max_tokens=200
+            max_tokens=250
         )
         return response.choices[0].message.content.strip()
     except:
-        return f"Transform complete. {len(results)} models. {sum(r['records'] for r in results)} total records."
+        return (
+            f"Transform complete. {len(results)} models built including "
+            f"6 ELF Beauty Gold models. "
+            f"{sum(r['records'] for r in results)} total records processed."
+        )
